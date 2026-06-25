@@ -97,10 +97,10 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="h-screen flex overflow-hidden">
+<body class="h-screen flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
     
     <!-- Left Sidebar: Form Controls -->
-    <div class="w-1/3 bg-white p-6 overflow-y-auto shadow-lg z-10 border-r">
+    <div class="w-full md:w-1/3 bg-white p-6 overflow-y-visible md:overflow-y-auto shadow-lg z-10 md:border-r border-b md:border-b-0 shrink-0">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold text-gray-800">Invoice Controls</h2>
             <a href="clients.html" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1.5 rounded-md text-sm font-medium transition flex items-center gap-1">
@@ -155,7 +155,7 @@
     </div>
 
     <!-- Right Sidebar: Live A4 PDF Preview -->
-    <div class="w-2/3 bg-gray-200 p-8 overflow-y-auto flex justify-center items-start">
+    <div class="w-full md:w-2/3 flex-1 bg-gray-200 p-4 md:p-8 overflow-x-auto md:overflow-y-auto flex justify-start md:justify-center items-start">
         <div id="invoice-preview">
             
             <div class="inv-header">
