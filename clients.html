@@ -243,27 +243,21 @@
 
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    <script>
+        const STORAGE_KEY_CLIENTS = 'invoice_clients';
+        const STORAGE_KEY_ENTRIES = 'invoice_entries';
 
-        const firebaseConfig = {
-          apiKey: "AIzaSyAkQYUN0dXTgvfL-P6cEDzMJxXkjyD1yjE",
-          authDomain: "invoice-generator-62697.firebaseapp.com",
-          projectId: "invoice-generator-62697",
-          storageBucket: "invoice-generator-62697.firebasestorage.app",
-          messagingSenderId: "245171294911",
-          appId: "1:245171294911:web:3d823a4a4756125ce6ec0a"
+        const loadData = (key) => JSON.parse(localStorage.getItem(key)) || [];
+        const saveData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+
+        let clients = loadData(STORAGE_KEY_CLIENTS);
+        let entries = loadData(STORAGE_KEY_ENTRIES).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const refreshUI = () => {
+            const searchVal = document.getElementById('client-search').value;
+            renderClients(searchVal);
+            renderEntries();
         };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        const clientsRef = collection(db, "clients");
-        const entriesRef = collection(db, "entries");
-
-        let clients = [];
-        let entries = [];
 
         window.switchTab = (tab) => {
             document.getElementById('view-clients').classList.toggle('hidden', tab !== 'clients');
@@ -277,7 +271,7 @@
             if (tab === 'clients') {
                 navClients.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600 text-white transition-colors duration-200';
                 navEntries.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors duration-200 text-slate-300';
-                renderClients();
+                renderClients(document.getElementById('client-search').value);
             } else {
                 navEntries.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600 text-white transition-colors duration-200';
                 navClients.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors duration-200 text-slate-300';
@@ -328,7 +322,7 @@
             openModal(clientModal);
         };
 
-        clientForm.addEventListener('submit', async (e) => {
+        clientForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const id = document.getElementById('client-id').value;
             const data = {
@@ -337,25 +331,25 @@
                 email: document.getElementById('client-email').value.trim()
             };
 
-            try {
-                if (id) {
-                    await updateDoc(doc(db, "clients", id), data);
-                } else {
-                    await addDoc(clientsRef, { ...data, createdAt: new Date().toISOString() });
+            if (id) {
+                const index = clients.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    clients[index] = { ...clients[index], ...data };
                 }
-                window.closeModals();
-            } catch (err) {
-                console.error("Error saving client:", err);
+            } else {
+                clients.push({ id: Date.now().toString(), ...data, createdAt: new Date().toISOString() });
             }
+            
+            saveData(STORAGE_KEY_CLIENTS, clients);
+            refreshUI();
+            window.closeModals();
         });
 
-        window.deleteClient = async (id) => {
+        window.deleteClient = (id) => {
             if (confirm('Delete this client? Associated entries will remain.')) {
-                try {
-                    await deleteDoc(doc(db, "clients", id));
-                } catch (err) {
-                    console.error("Error deleting client:", err);
-                }
+                clients = clients.filter(c => c.id !== id);
+                saveData(STORAGE_KEY_CLIENTS, clients);
+                refreshUI();
             }
         };
 
@@ -435,7 +429,7 @@
             openModal(entryModal);
         };
 
-        entryForm.addEventListener('submit', async (e) => {
+        entryForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const id = document.getElementById('entry-id').value;
             const data = {
@@ -447,25 +441,26 @@
                 rate: parseFloat(document.getElementById('entry-rate').value)
             };
 
-            try {
-                if (id) {
-                    await updateDoc(doc(db, "entries", id), data);
-                } else {
-                    await addDoc(entriesRef, { ...data, createdAt: new Date().toISOString() });
+            if (id) {
+                const index = entries.findIndex(e => e.id === id);
+                if (index !== -1) {
+                    entries[index] = { ...entries[index], ...data };
                 }
-                window.closeModals();
-            } catch (err) {
-                console.error("Error saving entry:", err);
+            } else {
+                entries.push({ id: Date.now().toString(), ...data, createdAt: new Date().toISOString() });
             }
+            
+            entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            saveData(STORAGE_KEY_ENTRIES, entries);
+            refreshUI();
+            window.closeModals();
         });
 
-        window.deleteEntry = async (id) => {
+        window.deleteEntry = (id) => {
             if (confirm('Delete this entry?')) {
-                try {
-                    await deleteDoc(doc(db, "entries", id));
-                } catch (err) {
-                    console.error("Error deleting entry:", err);
-                }
+                entries = entries.filter(e => e.id !== id);
+                saveData(STORAGE_KEY_ENTRIES, entries);
+                refreshUI();
             }
         };
 
@@ -520,37 +515,8 @@
             window.location.href = 'index.html';
         };
 
-        const migrateLocalData = async () => {
-            const localClients = JSON.parse(localStorage.getItem('invoice_clients')) || [];
-            const localEntries = JSON.parse(localStorage.getItem('invoice_entries')) || [];
-            if (localClients.length > 0 || localEntries.length > 0) {
-                const batch = writeBatch(db);
-                const clientIdMap = {};
-                localClients.forEach(c => {
-                    const ref = doc(collection(db, "clients"));
-                    clientIdMap[c.id] = ref.id;
-                    batch.set(ref, { name: c.name, contact: c.contact, email: c.email });
-                });
-                localEntries.forEach(e => {
-                    batch.set(doc(collection(db, "entries")), { ...e, clientId: clientIdMap[e.clientId] || e.clientId, id: undefined });
-                });
-                await batch.commit();
-                localStorage.removeItem('invoice_clients');
-                localStorage.removeItem('invoice_entries');
-            }
-        };
-
-        onSnapshot(clientsRef, (snapshot) => {
-            clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderClients(clientSearch.value);
-            if (clients.length === 0) migrateLocalData();
-        });
-
-        onSnapshot(entriesRef, (snapshot) => {
-            entries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => new Date(b.date) - new Date(a.date));
-            renderEntries();
-            renderClients(clientSearch.value);
-        });
+        // Initialize UI
+        refreshUI();
     </script>
 </body>
 </html>
