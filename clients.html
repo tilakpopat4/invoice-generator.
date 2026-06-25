@@ -243,19 +243,29 @@
 
     </div>
 
-    <!-- Application Logic -->
-    <script>
-        // --- DATA LAYER ---
-        let clients = JSON.parse(localStorage.getItem('invoice_clients')) || [];
-        let entries = JSON.parse(localStorage.getItem('invoice_entries')) || [];
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        const saveData = () => {
-            localStorage.setItem('invoice_clients', JSON.stringify(clients));
-            localStorage.setItem('invoice_entries', JSON.stringify(entries));
+        const firebaseConfig = {
+          apiKey: "AIzaSyAkQYUN0dXTgvfL-P6cEDzMJxXkjyD1yjE",
+          authDomain: "invoice-generator-62697.firebaseapp.com",
+          projectId: "invoice-generator-62697",
+          storageBucket: "invoice-generator-62697.firebasestorage.app",
+          messagingSenderId: "245171294911",
+          appId: "1:245171294911:web:3d823a4a4756125ce6ec0a"
         };
 
-        // --- NAVIGATION ---
-        const switchTab = (tab) => {
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const clientsRef = collection(db, "clients");
+        const entriesRef = collection(db, "entries");
+
+        let clients = [];
+        let entries = [];
+
+        window.switchTab = (tab) => {
             document.getElementById('view-clients').classList.toggle('hidden', tab !== 'clients');
             document.getElementById('view-clients').classList.toggle('block', tab === 'clients');
             document.getElementById('view-entries').classList.toggle('hidden', tab !== 'entries');
@@ -275,13 +285,12 @@
             }
         };
 
-        // --- MODAL LOGIC ---
         const overlay = document.getElementById('modal-overlay');
         const clientModal = document.getElementById('client-modal');
         const entryModal = document.getElementById('entry-modal');
         const invoiceSetupModal = document.getElementById('invoice-setup-modal');
 
-        const closeModals = () => {
+        window.closeModals = () => {
             overlay.classList.remove('opacity-100', 'pointer-events-auto');
             overlay.classList.add('opacity-0', 'pointer-events-none');
             clientModal.classList.add('hidden');
@@ -291,14 +300,13 @@
         };
 
         const openModal = (modalElement) => {
-            closeModals();
+            window.closeModals();
             overlay.classList.remove('opacity-0', 'pointer-events-none');
             overlay.classList.add('opacity-100', 'pointer-events-auto');
             modalElement.classList.remove('hidden');
             document.body.classList.add('modal-active');
         };
 
-        // --- CLIENTS LOGIC ---
         const clientForm = document.getElementById('client-form');
         const clientSearch = document.getElementById('client-search');
         
@@ -320,29 +328,34 @@
             openModal(clientModal);
         };
 
-        clientForm.addEventListener('submit', (e) => {
+        clientForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('client-id').value;
-            const name = document.getElementById('client-name').value.trim();
-            const contact = document.getElementById('client-contact').value.trim();
-            const email = document.getElementById('client-email').value.trim();
+            const data = {
+                name: document.getElementById('client-name').value.trim(),
+                contact: document.getElementById('client-contact').value.trim(),
+                email: document.getElementById('client-email').value.trim()
+            };
 
-            if (id) {
-                const idx = clients.findIndex(c => c.id === id);
-                if (idx !== -1) clients[idx] = { ...clients[idx], name, contact, email };
-            } else {
-                clients.push({ id: Date.now().toString(), name, contact, email, createdAt: new Date().toISOString() });
+            try {
+                if (id) {
+                    await updateDoc(doc(db, "clients", id), data);
+                } else {
+                    await addDoc(clientsRef, { ...data, createdAt: new Date().toISOString() });
+                }
+                window.closeModals();
+            } catch (err) {
+                console.error("Error saving client:", err);
             }
-            saveData();
-            closeModals();
-            renderClients(clientSearch.value);
         });
 
-        window.deleteClient = (id) => {
-            if (confirm('Delete this client? Associated entries will remain but show as Unknown.')) {
-                clients = clients.filter(c => c.id !== id);
-                saveData();
-                renderClients(clientSearch.value);
+        window.deleteClient = async (id) => {
+            if (confirm('Delete this client? Associated entries will remain.')) {
+                try {
+                    await deleteDoc(doc(db, "clients", id));
+                } catch (err) {
+                    console.error("Error deleting client:", err);
+                }
             }
         };
 
@@ -354,13 +367,11 @@
             document.getElementById('client-count').innerText = `${filtered.length} clients`;
             document.getElementById('client-empty-state').classList.toggle('hidden', filtered.length > 0);
             
-            // Calculate Global Total
             const globalTotal = entries.reduce((sum, e) => sum + (e.qty * e.rate), 0);
             document.getElementById('global-total-clients').innerText = `₹${globalTotal.toFixed(2)}`;
             document.getElementById('global-total-entries').innerText = `₹${globalTotal.toFixed(2)}`;
             
             filtered.forEach(client => {
-                // Calculate client specific stats
                 const clientEntries = entries.filter(e => e.clientId === client.id);
                 const clientTotal = clientEntries.reduce((sum, e) => sum + (e.qty * e.rate), 0);
                 
@@ -399,21 +410,13 @@
 
         clientSearch.addEventListener('input', (e) => renderClients(e.target.value));
 
-        // --- ENTRIES LOGIC ---
         const entryForm = document.getElementById('entry-form');
         
         window.openEntryModal = (id = null) => {
-            if (clients.length === 0) {
-                alert("Please add a client first before logging an entry.");
-                return;
-            }
-            
+            if (clients.length === 0) return alert("Add a client first.");
             entryForm.reset();
             document.getElementById('entry-id').value = '';
             document.getElementById('entry-date').valueAsDate = new Date();
-            document.getElementById('entry-modal-title').innerText = 'Log Service Entry';
-            
-            // Populate client dropdown
             const clientSelect = document.getElementById('entry-client');
             clientSelect.innerHTML = clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
             
@@ -427,13 +430,12 @@
                     document.getElementById('entry-desc').value = entry.description;
                     document.getElementById('entry-qty').value = entry.qty;
                     document.getElementById('entry-rate').value = entry.rate;
-                    document.getElementById('entry-modal-title').innerText = 'Edit Entry';
                 }
             }
             openModal(entryModal);
         };
 
-        entryForm.addEventListener('submit', (e) => {
+        entryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('entry-id').value;
             const data = {
@@ -445,27 +447,25 @@
                 rate: parseFloat(document.getElementById('entry-rate').value)
             };
 
-            if (id) {
-                const idx = entries.findIndex(x => x.id === id);
-                if (idx !== -1) entries[idx] = { ...entries[idx], ...data };
-            } else {
-                entries.push({ id: Date.now().toString(), ...data, createdAt: new Date().toISOString() });
+            try {
+                if (id) {
+                    await updateDoc(doc(db, "entries", id), data);
+                } else {
+                    await addDoc(entriesRef, { ...data, createdAt: new Date().toISOString() });
+                }
+                window.closeModals();
+            } catch (err) {
+                console.error("Error saving entry:", err);
             }
-            
-            // Sort entries descending by date
-            entries.sort((a, b) => new Date(b.date) - new Date(a.date));
-            saveData();
-            closeModals();
-            renderEntries();
-            renderClients(clientSearch.value); // Update totals on clients tab
         });
 
-        window.deleteEntry = (id) => {
+        window.deleteEntry = async (id) => {
             if (confirm('Delete this entry?')) {
-                entries = entries.filter(e => e.id !== id);
-                saveData();
-                renderEntries();
-                renderClients(clientSearch.value); // Update totals on clients tab
+                try {
+                    await deleteDoc(doc(db, "entries", id));
+                } catch (err) {
+                    console.error("Error deleting entry:", err);
+                }
             }
         };
 
@@ -476,7 +476,7 @@
             
             entries.forEach(entry => {
                 const client = clients.find(c => c.id === entry.clientId);
-                const clientName = client ? client.name : '<span class="text-red-500">Unknown Client</span>';
+                const clientName = client ? client.name : 'Unknown';
                 const amount = entry.qty * entry.rate;
                 const catColor = entry.category === 'Editing' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800';
                 
@@ -484,10 +484,8 @@
                     <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
                         <td class="p-4 whitespace-nowrap">${new Date(entry.date).toLocaleDateString()}</td>
                         <td class="p-4 font-medium">${clientName}</td>
-                        <td class="p-4">
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full ${catColor}">${entry.category}</span>
-                        </td>
-                        <td class="p-4 text-slate-600 max-w-xs truncate" title="${entry.description}">${entry.description}</td>
+                        <td class="p-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${catColor}">${entry.category}</span></td>
+                        <td class="p-4">${entry.description}</td>
                         <td class="p-4 text-right font-medium">₹${amount.toFixed(2)}</td>
                         <td class="p-4 text-center">
                             <button onclick="openEntryModal('${entry.id}')" class="text-indigo-600 hover:underline mr-2 text-sm">Edit</button>
@@ -498,55 +496,61 @@
             });
         };
 
-        // --- MONTHLY INVOICE GENERATION ---
         window.openInvoiceSetup = (clientId, clientName) => {
             document.getElementById('inv-setup-client-id').value = clientId;
             document.getElementById('inv-setup-client-name').innerText = clientName;
-            
-            // Default to current month
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            document.getElementById('inv-setup-month').value = `${yyyy}-${mm}`;
-            
+            const d = new Date();
+            document.getElementById('inv-setup-month').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             openModal(invoiceSetupModal);
         };
 
         window.proceedToInvoice = () => {
             const clientId = document.getElementById('inv-setup-client-id').value;
-            const monthVal = document.getElementById('inv-setup-month').value; // format: "YYYY-MM"
-            if (!monthVal) return alert('Select a month');
-            
+            const monthVal = document.getElementById('inv-setup-month').value;
             const [year, month] = monthVal.split('-');
+            const clientEntries = entries.filter(e => e.clientId === clientId && new Date(e.date).getFullYear() == year && (new Date(e.date).getMonth() + 1) == month);
             
-            // Filter entries for this client and month
-            const clientEntries = entries.filter(e => {
-                if (e.clientId !== clientId) return false;
-                const eDate = new Date(e.date);
-                return eDate.getFullYear() == year && (eDate.getMonth() + 1) == month;
-            });
-            
-            if (clientEntries.length === 0) {
-                alert('No entries found for this client in the selected month.');
-                return;
-            }
+            if (clientEntries.length === 0) return alert('No entries found.');
 
-            const client = clients.find(c => c.id === clientId);
-            
-            // Save draft to localStorage for index.html to read
-            const draft = {
-                client: client,
+            localStorage.setItem('invoice_draft', JSON.stringify({
+                client: clients.find(c => c.id === clientId),
                 entries: clientEntries,
                 monthVal: monthVal
-            };
-            localStorage.setItem('invoice_draft', JSON.stringify(draft));
-            
-            // Redirect
+            }));
             window.location.href = 'index.html';
         };
 
-        // Initialize
-        renderClients();
+        const migrateLocalData = async () => {
+            const localClients = JSON.parse(localStorage.getItem('invoice_clients')) || [];
+            const localEntries = JSON.parse(localStorage.getItem('invoice_entries')) || [];
+            if (localClients.length > 0 || localEntries.length > 0) {
+                const batch = writeBatch(db);
+                const clientIdMap = {};
+                localClients.forEach(c => {
+                    const ref = doc(collection(db, "clients"));
+                    clientIdMap[c.id] = ref.id;
+                    batch.set(ref, { name: c.name, contact: c.contact, email: c.email });
+                });
+                localEntries.forEach(e => {
+                    batch.set(doc(collection(db, "entries")), { ...e, clientId: clientIdMap[e.clientId] || e.clientId, id: undefined });
+                });
+                await batch.commit();
+                localStorage.removeItem('invoice_clients');
+                localStorage.removeItem('invoice_entries');
+            }
+        };
+
+        onSnapshot(clientsRef, (snapshot) => {
+            clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderClients(clientSearch.value);
+            if (clients.length === 0) migrateLocalData();
+        });
+
+        onSnapshot(entriesRef, (snapshot) => {
+            entries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => new Date(b.date) - new Date(a.date));
+            renderEntries();
+            renderClients(clientSearch.value);
+        });
     </script>
 </body>
 </html>
