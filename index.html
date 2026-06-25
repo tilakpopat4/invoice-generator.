@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPF Invoice Generator</title>
+    <!-- Tailwind CSS for the control panel styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2pdf.js for client-side PDF rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { background-color: #f3f4f6; }
+        
+        /* Strict Invoice Print Styling */
+        #invoice-preview {
+            background-color: #faf8f5;
+            color: #333;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            padding: 20mm;
+            width: 210mm;
+            min-height: 297mm;
+            box-sizing: border-box;
+            margin: 0 auto;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .inv-header {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .inv-logo-text {
+            font-size: 14pt;
+            color: black;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .inv-header h1 {
+            margin: 0;
+            font-size: 24pt;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .inv-header p {
+            margin: 8px 0 0 0;
+            font-size: 12pt;
+            color: #555;
+        }
+        .inv-info-section {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .inv-info-section td {
+            vertical-align: top;
+            width: 50%;
+        }
+        .inv-items {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .inv-items th {
+            background-color: #2c3e50;
+            color: white;
+            text-align: left;
+            padding: 10px;
+            font-size: 11pt;
+        }
+        .inv-items td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ddd;
+            font-size: 11pt;
+        }
+        .inv-totals {
+            text-align: right;
+            margin-bottom: 40px;
+        }
+        .inv-totals p {
+            margin: 5px 0;
+            font-size: 12pt;
+        }
+        .inv-totals .grand-total {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #2c3e50;
+            border-top: 2px solid #2c3e50;
+            padding-top: 10px;
+            display: inline-block;
+        }
+        .inv-payment {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        /* Custom Scrollbar for the sidebar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+    
+    <!-- Left Sidebar: Form Controls -->
+    <div class="w-1/3 bg-white p-6 overflow-y-auto shadow-lg z-10 border-r">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">Invoice Controls</h2>
+        
+        <div class="space-y-5">
+            <!-- Invoice Meta Data -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Invoice Number</label>
+                <input type="text" id="inv-number" value="#INV-0004" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 focus:ring-blue-500 transition">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" id="inv-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Due Date</label>
+                    <input type="date" id="inv-due-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 transition">
+                </div>
+            </div>
+
+            <!-- Client Info -->
+            <div class="border-t border-gray-200 pt-4">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800">Client Details</h3>
+                <input type="text" id="client-name" placeholder="Client Name (e.g. Hemang)" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border mb-3 focus:border-blue-500 transition">
+                <input type="text" id="client-contact" placeholder="Contact Info (+91 ...)" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 transition">
+            </div>
+
+            <!-- Dynamic Reels List -->
+            <div class="border-t border-gray-200 pt-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">Reels Edited</h3>
+                    <button onclick="addItem()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition font-medium shadow-sm">+ Add Item</button>
+                </div>
+                <div id="items-container" class="space-y-3">
+                    <!-- Javascript will inject line items here -->
+                </div>
+            </div>
+        </div>
+
+        <button onclick="downloadPDF()" class="w-full mt-8 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow-lg transition duration-200 flex justify-center items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+            Download PDF
+        </button>
+    </div>
+
+    <!-- Right Sidebar: Live A4 PDF Preview -->
+    <div class="w-2/3 bg-gray-200 p-8 overflow-y-auto flex justify-center items-start">
+        <div id="invoice-preview">
+            
+            <div class="inv-header">
+                <div class="inv-logo-text">TPF</div>
+                <h1>Invoice Of Editing</h1>
+                <p>Tilak Popat , +91 78749 03810</p>
+            </div>
+            
+            <table class="inv-info-section">
+                <tr>
+                    <td>
+                        <strong style="color: #2c3e50;">BILL TO:</strong><br><br>
+                        <span id="preview-client-name" style="font-weight: 500;"></span><br>
+                        <span id="preview-client-contact"></span>
+                    </td>
+                    <td style="text-align: right;">
+                        <strong id="preview-inv-num" style="color: #2c3e50;"></strong><br><br>
+                        <strong>Date:</strong> <span id="preview-date"></span><br>
+                        <strong>Due Date:</strong> <span id="preview-due-date"></span>
+                    </td>
+                </tr>
+            </table>
+
+            <table class="inv-items">
+                <thead>
+                    <tr>
+                        <th>Reel Title & Details</th>
+                        <th style="text-align: center;">Qty</th>
+                        <th style="text-align: right;">Rate (₹)</th>
+                        <th style="text-align: right;">Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="preview-items-body">
+                    <!-- Live injected rows -->
+                </tbody>
+            </table>
+
+            <div class="inv-totals">
+                <p>Subtotal: ₹ <span id="preview-subtotal">0.00</span></p>
+                <div class="grand-total">Total Due: ₹ <span id="preview-total">0.00</span></div>
+            </div>
+
+            <div class="inv-payment">
+                <strong style="color: #2c3e50;">PAYMENT METHOD</strong>
+                <p style="font-size: 11pt; color: #555; margin-top: 5px;">Scan the QR code below to make the payment:</p>
+                <div style="margin: 15px 0;">
+                    <!-- Uses a public API to natively generate your exact Google Pay QR Code parameters -->
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=upi://pay?pa=tilakpopat2007-1@okaxis&pn=Tilak%20Popat" alt="GPay QR Code" style="width: 180px; height: auto; border-radius: 12px; border: 1px solid #ddd; display: block;">
+                </div>
+                <p style="font-size: 11pt; color: #555; margin-top: 10px;"><strong style="color: #2c3e50;">UPI ID:</strong> tilakpopat2007-1@okaxis</p>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // Default Line Items
+        let items = [
+            { title: 'Standard Reel Edit', qty: 1, rate: 800 }
+        ];
+
+        // Format dates beautifully
+        const formatDate = (dateStr) => {
+            if(!dateStr) return '';
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateStr).toLocaleDateString('en-US', options);
+        };
+
+        // Initialize today's date and a default +7 due date
+        document.getElementById('inv-date').valueAsDate = new Date();
+        let dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 7);
+        document.getElementById('inv-due-date').valueAsDate = dueDate;
+
+        // Core render engine
+        const updatePreview = () => {
+            // Strings
+            document.getElementById('preview-client-name').innerText = document.getElementById('client-name').value || 'Client Name';
+            document.getElementById('preview-client-contact').innerText = document.getElementById('client-contact').value || '';
+            document.getElementById('preview-inv-num').innerText = 'INVOICE ' + document.getElementById('inv-number').value;
+            document.getElementById('preview-date').innerText = formatDate(document.getElementById('inv-date').value);
+            document.getElementById('preview-due-date').innerText = formatDate(document.getElementById('inv-due-date').value);
+
+            // Table Body
+            const tbody = document.getElementById('preview-items-body');
+            tbody.innerHTML = '';
+            let subtotal = 0;
+
+            items.forEach((item) => {
+                const amount = item.qty * item.rate;
+                subtotal += amount;
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${item.title || 'Untitled Reel'}</strong></td>
+                        <td style="text-align: center;">${item.qty}</td>
+                        <td style="text-align: right;">${parseFloat(item.rate).toFixed(2)}</td>
+                        <td style="text-align: right;">${amount.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            // Financials
+            document.getElementById('preview-subtotal').innerText = subtotal.toFixed(2);
+            document.getElementById('preview-total').innerText = subtotal.toFixed(2);
+        };
+
+        // Render form inputs dynamically
+        const renderFormItems = () => {
+            const container = document.getElementById('items-container');
+            container.innerHTML = '';
+            
+            items.forEach((item, index) => {
+                container.innerHTML += `
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200 relative shadow-sm">
+                        <button onclick="removeItem(${index})" class="absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold" title="Remove Reel">✕</button>
+                        <input type="text" value="${item.title}" oninput="updateItem(${index}, 'title', this.value)" placeholder="Reel Title" class="block w-full rounded border-gray-300 shadow-sm p-2 border mb-2 text-sm pr-6 focus:border-blue-500 transition">
+                        <div class="flex gap-2">
+                            <div class="w-1/3">
+                                <label class="text-xs text-gray-500 font-medium">Qty</label>
+                                <input type="number" value="${item.qty}" oninput="updateItem(${index}, 'qty', this.value)" class="block w-full rounded border-gray-300 shadow-sm p-2 border text-sm focus:border-blue-500 transition">
+                            </div>
+                            <div class="w-2/3">
+                                <label class="text-xs text-gray-500 font-medium">Rate (₹)</label>
+                                <input type="number" value="${item.rate}" oninput="updateItem(${index}, 'rate', this.value)" class="block w-full rounded border-gray-300 shadow-sm p-2 border text-sm focus:border-blue-500 transition">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            updatePreview();
+        };
+
+        // Array Modifiers
+        const addItem = () => {
+            items.push({ title: '', qty: 1, rate: 800 });
+            renderFormItems();
+        };
+
+        const removeItem = (index) => {
+            items.splice(index, 1);
+            renderFormItems();
+        };
+
+        const updateItem = (index, field, value) => {
+            items[index][field] = field === 'title' ? value : parseFloat(value) || 0;
+            updatePreview();
+        };
+
+        // Trigger PDF Download
+        const downloadPDF = () => {
+            const element = document.getElementById('invoice-preview');
+            const clientName = document.getElementById('client-name').value.trim() || 'Client';
+            const invNum = document.getElementById('inv-number').value.replace('#', '').trim();
+            
+            const opt = {
+                margin:       0,
+                filename:     `Invoice_${clientName}_${invNum}.pdf`,
+                image:        { type: 'jpeg', quality: 1.0 },
+                html2canvas:  { scale: 2, useCORS: true }, // useCORS ensures the QR API fetches correctly
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            html2pdf().set(opt).from(element).save();
+        };
+
+        // Bind global listeners
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', updatePreview);
+        });
+
+        // Setup initial view
+        renderFormItems();
+        updatePreview();
+    </script>
+</body>
+</html>
