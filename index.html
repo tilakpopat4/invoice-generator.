@@ -328,7 +328,6 @@
         });
 
         // Setup initial view
-        
         // Parse URL parameters for client info (Integration with clients.html)
         const urlParams = new URLSearchParams(window.location.search);
         const clientNameParam = urlParams.get('clientName');
@@ -340,7 +339,6 @@
         if (clientContactParam) {
             document.getElementById('client-contact').value = clientContactParam;
         }
-
         renderFormItems();
         updatePreview();
     </script>
