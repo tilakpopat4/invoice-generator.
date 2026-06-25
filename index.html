@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPF Invoice Generator</title>
+    <title>Invoice Generator</title>
     <!-- Tailwind CSS for the control panel styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html2pdf.js for client-side PDF rendering -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
+        /* Force Times New Roman on all elements */
+        body, input, button, #invoice-preview, * { 
+            font-family: 'Times New Roman', Times, serif !important; 
+        }
+        
         body { background-color: #f3f4f6; }
         
         /* Strict Invoice Print Styling */
         #invoice-preview {
             background-color: #faf8f5;
             color: #333;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             padding: 20mm;
             width: 210mm;
             min-height: 297mm;
@@ -157,7 +161,7 @@
                 <tr>
                     <td>
                         <strong style="color: #2c3e50;">BILL TO:</strong><br><br>
-                        <span id="preview-client-name" style="font-weight: 500;"></span><br>
+                        <span id="preview-client-name" style="font-weight: bold;"></span><br>
                         <span id="preview-client-contact"></span>
                     </td>
                     <td style="text-align: right;">
