@@ -3,312 +3,522 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Management Dashboard</title>
-    <!-- Tailwind CSS -->
+    <title>Business Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden text-slate-800">
 
-    <!-- Sidebar: Add/Edit Form -->
-    <aside class="w-96 bg-white border-r border-slate-200 p-6 flex flex-col shadow-lg z-10">
-        <div class="mb-8 flex items-center gap-3">
-            <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-md">
-                C
-            </div>
-            <div>
-                <h1 class="text-xl font-bold text-slate-900 leading-tight">Client Hub</h1>
-                <p class="text-xs text-slate-500">Personal Management</p>
-            </div>
-        </div>
-
-        <div class="flex-1 overflow-y-auto pr-2">
-            <h2 id="form-title" class="text-lg font-semibold mb-4 text-slate-800 border-b pb-2">Add New Client</h2>
-            
-            <form id="client-form" class="space-y-4">
-                <input type="hidden" id="client-id">
-                
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Full Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="client-name" required class="w-full rounded-md border-slate-300 shadow-sm p-2.5 border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition outline-none text-sm bg-slate-50" placeholder="e.g. Acme Corp">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
-                    <input type="text" id="client-contact" class="w-full rounded-md border-slate-300 shadow-sm p-2.5 border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition outline-none text-sm bg-slate-50" placeholder="e.g. +91 98765 43210">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                    <input type="email" id="client-email" class="w-full rounded-md border-slate-300 shadow-sm p-2.5 border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition outline-none text-sm bg-slate-50" placeholder="e.g. contact@acme.com">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Notes / Description</label>
-                    <textarea id="client-notes" rows="3" class="w-full rounded-md border-slate-300 shadow-sm p-2.5 border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition outline-none text-sm bg-slate-50 resize-none" placeholder="Add any details about the client..."></textarea>
-                </div>
-
-                <div class="pt-4 flex gap-2">
-                    <button type="submit" id="save-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-md shadow transition duration-200">
-                        Save Client
-                    </button>
-                    <button type="button" id="cancel-btn" onclick="resetForm()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-md transition duration-200">
-                        Cancel
-                    </button>
-                </div>
-            </form>
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-slate-900 flex flex-col z-20 text-slate-300">
+        <div class="p-6 border-b border-slate-800">
+            <h1 class="text-xl font-bold text-white tracking-wide">Business<span class="text-indigo-400">Hub</span></h1>
+            <p class="text-xs text-slate-500 mt-1">Management Dashboard</p>
         </div>
         
-        <div class="mt-4 pt-4 border-t border-slate-200">
-            <a href="index.html" class="flex items-center justify-center gap-2 w-full bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-200">
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="switchTab('clients')" id="nav-clients" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600 text-white transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                Clients
+            </button>
+            <button onclick="switchTab('entries')" id="nav-entries" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                Service Entries
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-800">
+            <a href="index.html" class="flex items-center justify-center gap-2 w-full bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium py-2.5 px-4 rounded-md transition duration-200">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Back to Invoice Generator
+                Quick Invoice
             </a>
         </div>
     </aside>
 
-    <!-- Main Content: Client List -->
-    <main class="flex-1 overflow-y-auto p-8 relative">
-        <div class="max-w-6xl mx-auto">
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto relative bg-slate-50">
+        
+        <!-- ==================== CLIENTS VIEW ==================== -->
+        <div id="view-clients" class="p-8 max-w-6xl mx-auto block">
             <div class="flex justify-between items-end mb-8">
                 <div>
                     <h2 class="text-3xl font-bold text-slate-800">Your Clients</h2>
                     <p class="text-slate-500 mt-1" id="client-count">Manage your client details</p>
                 </div>
-                
-                <div class="relative">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input type="text" id="search-input" placeholder="Search clients..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-full text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-64 shadow-sm">
+                <div class="flex gap-4">
+                    <div class="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <input type="text" id="client-search" placeholder="Search clients..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-64 shadow-sm bg-white">
+                    </div>
+                    <button onclick="openClientModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2">
+                        + Add Client
+                    </button>
                 </div>
             </div>
 
-            <!-- Empty State -->
-            <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 text-center">
-                <div class="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                </div>
-                <h3 class="text-xl font-semibold text-slate-700">No clients found</h3>
-                <p class="text-slate-500 mt-2 max-w-sm">Add your first client using the form on the left to start managing your contacts.</p>
-            </div>
-
-            <!-- Client Grid -->
             <div id="clients-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                <!-- Client cards will be injected here by JS -->
+                <!-- Client cards injected here -->
+            </div>
+            
+            <div id="client-empty-state" class="hidden flex flex-col items-center justify-center py-20 text-center">
+                <p class="text-slate-500 mt-2">No clients found. Add one to get started.</p>
             </div>
         </div>
+
+        <!-- ==================== ENTRIES VIEW ==================== -->
+        <div id="view-entries" class="p-8 max-w-6xl mx-auto hidden">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">Service Entries</h2>
+                    <p class="text-slate-500 mt-1">Log your completed work</p>
+                </div>
+                <button onclick="openEntryModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2">
+                    + Log New Entry
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+                            <th class="p-4 font-semibold">Date</th>
+                            <th class="p-4 font-semibold">Client</th>
+                            <th class="p-4 font-semibold">Category</th>
+                            <th class="p-4 font-semibold">Description</th>
+                            <th class="p-4 font-semibold text-right">Amount (₹)</th>
+                            <th class="p-4 font-semibold text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entries-table-body" class="text-sm">
+                        <!-- Entries injected here -->
+                    </tbody>
+                </table>
+                <div id="entries-empty-state" class="hidden p-8 text-center text-slate-500">
+                    No service entries logged yet.
+                </div>
+            </div>
+        </div>
+
     </main>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50 bg-slate-900 bg-opacity-50 backdrop-blur-sm">
+        
+        <!-- Client Modal -->
+        <div id="client-modal" class="hidden bg-white w-full max-w-md mx-auto rounded-xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 id="client-modal-title" class="font-bold text-lg text-slate-800">Add Client</h3>
+                <button onclick="closeModals()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <form id="client-form" class="p-6 space-y-4">
+                <input type="hidden" id="client-id">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="client-name" required class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
+                    <input type="text" id="client-contact" class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                    <input type="email" id="client-email" class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-slate-50">
+                </div>
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closeModals()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-md transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-md shadow transition">Save Client</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Entry Modal -->
+        <div id="entry-modal" class="hidden bg-white w-full max-w-lg mx-auto rounded-xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 id="entry-modal-title" class="font-bold text-lg text-slate-800">Log Service Entry</h3>
+                <button onclick="closeModals()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <form id="entry-form" class="p-6 space-y-4">
+                <input type="hidden" id="entry-id">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Date <span class="text-red-500">*</span></label>
+                        <input type="date" id="entry-date" required class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Client <span class="text-red-500">*</span></label>
+                        <select id="entry-client" required class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-slate-50">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Category <span class="text-red-500">*</span></label>
+                    <div class="flex gap-4 mt-1">
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="entry-category" value="Editing" required class="mr-2 text-indigo-600 focus:ring-indigo-500" checked> Editing (Reels, Video)
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="entry-category" value="Other" required class="mr-2 text-indigo-600 focus:ring-indigo-500"> Other (Shoots, Consulting)
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Description <span class="text-red-500">*</span></label>
+                    <input type="text" id="entry-desc" required placeholder="e.g. Summer Vlog Edit" class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-slate-50">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Quantity <span class="text-red-500">*</span></label>
+                        <input type="number" id="entry-qty" required min="1" value="1" step="0.1" class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Rate (₹) <span class="text-red-500">*</span></label>
+                        <input type="number" id="entry-rate" required min="0" step="0.01" placeholder="800" class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-slate-50">
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3 border-t border-slate-100 mt-6">
+                    <button type="button" onclick="closeModals()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-md transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-md shadow transition">Save Entry</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Monthly Invoice Setup Modal -->
+        <div id="invoice-setup-modal" class="hidden bg-white w-full max-w-sm mx-auto rounded-xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50">
+                <h3 class="font-bold text-lg text-indigo-900">Generate Invoice</h3>
+                <button onclick="closeModals()" class="text-indigo-400 hover:text-indigo-600">✕</button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-600 mb-4">Select the month to generate a consolidated invoice for <strong id="inv-setup-client-name"></strong>.</p>
+                <input type="hidden" id="inv-setup-client-id">
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Month & Year</label>
+                    <input type="month" id="inv-setup-month" class="w-full rounded-md border-slate-300 shadow-sm p-2 border focus:border-indigo-500 outline-none text-sm bg-white">
+                </div>
+                
+                <div class="pt-6 flex gap-3">
+                    <button type="button" onclick="closeModals()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-md transition">Cancel</button>
+                    <button type="button" onclick="proceedToInvoice()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-md shadow transition">Generate</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
 
     <!-- Application Logic -->
     <script>
-        // Data Structure
+        // --- DATA LAYER ---
         let clients = JSON.parse(localStorage.getItem('invoice_clients')) || [];
+        let entries = JSON.parse(localStorage.getItem('invoice_entries')) || [];
 
-        // DOM Elements
-        const form = document.getElementById('client-form');
-        const grid = document.getElementById('clients-grid');
-        const emptyState = document.getElementById('empty-state');
-        const searchInput = document.getElementById('search-input');
-        const clientCount = document.getElementById('client-count');
-        const formTitle = document.getElementById('form-title');
-        const cancelBtn = document.getElementById('cancel-btn');
-        const saveBtn = document.getElementById('save-btn');
-
-        // Form Fields
-        const idInput = document.getElementById('client-id');
-        const nameInput = document.getElementById('client-name');
-        const contactInput = document.getElementById('client-contact');
-        const emailInput = document.getElementById('client-email');
-        const notesInput = document.getElementById('client-notes');
-
-        // Save data to localStorage
-        const saveToStorage = () => {
+        const saveData = () => {
             localStorage.setItem('invoice_clients', JSON.stringify(clients));
+            localStorage.setItem('invoice_entries', JSON.stringify(entries));
         };
 
-        // Render Clients
-        const renderClients = (filterText = '') => {
-            grid.innerHTML = '';
+        // --- NAVIGATION ---
+        const switchTab = (tab) => {
+            document.getElementById('view-clients').classList.toggle('hidden', tab !== 'clients');
+            document.getElementById('view-clients').classList.toggle('block', tab === 'clients');
+            document.getElementById('view-entries').classList.toggle('hidden', tab !== 'entries');
+            document.getElementById('view-entries').classList.toggle('block', tab === 'entries');
             
-            const filteredClients = clients.filter(c => 
-                c.name.toLowerCase().includes(filterText.toLowerCase()) || 
-                (c.contact && c.contact.toLowerCase().includes(filterText.toLowerCase())) ||
-                (c.email && c.email.toLowerCase().includes(filterText.toLowerCase()))
-            );
-
-            clientCount.innerText = `${filteredClients.length} ${filteredClients.length === 1 ? 'client' : 'clients'} total`;
-
-            if (filteredClients.length === 0) {
-                emptyState.classList.remove('hidden');
-                grid.classList.add('hidden');
+            const navClients = document.getElementById('nav-clients');
+            const navEntries = document.getElementById('nav-entries');
+            
+            if (tab === 'clients') {
+                navClients.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600 text-white transition-colors duration-200';
+                navEntries.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors duration-200 text-slate-300';
+                renderClients();
             } else {
-                emptyState.classList.add('hidden');
-                grid.classList.remove('hidden');
-
-                filteredClients.forEach(client => {
-                    // Create card
-                    const card = document.createElement('div');
-                    card.className = 'glass-card rounded-xl p-5 flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative group overflow-hidden border border-slate-200';
-                    
-                    // Header color banner
-                    card.innerHTML = `
-                        <div class="h-2 w-full absolute top-0 left-0 bg-indigo-500 opacity-80"></div>
-                        <div class="flex justify-between items-start mb-4 mt-2">
-                            <div>
-                                <h3 class="text-lg font-bold text-slate-800 line-clamp-1" title="${client.name}">${client.name}</h3>
-                                <p class="text-xs text-slate-500 mt-0.5">Added ${new Date(client.createdAt).toLocaleDateString()}</p>
-                            </div>
-                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <button onclick="editClient('${client.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition" title="Edit">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                </button>
-                                <button onclick="deleteClient('${client.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition" title="Delete">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-2 mb-6 flex-1">
-                            ${client.contact ? `
-                            <div class="flex items-center text-sm text-slate-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                                ${client.contact}
-                            </div>` : ''}
-                            
-                            ${client.email ? `
-                            <div class="flex items-center text-sm text-slate-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                <a href="mailto:${client.email}" class="hover:text-indigo-600 hover:underline">${client.email}</a>
-                            </div>` : ''}
-
-                            ${client.notes ? `
-                            <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500 line-clamp-2" title="${client.notes}">
-                                ${client.notes}
-                            </div>` : ''}
-                        </div>
-                        
-                        <div class="mt-auto pt-4">
-                            <button onclick="generateInvoice('${client.name}', '${client.contact || ''}')" class="w-full flex items-center justify-center gap-2 bg-slate-50 hover:bg-indigo-50 text-indigo-600 border border-indigo-100 font-medium py-2 px-4 rounded transition duration-200 text-sm shadow-sm group-hover:border-indigo-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                Generate Invoice
-                            </button>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
+                navEntries.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600 text-white transition-colors duration-200';
+                navClients.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors duration-200 text-slate-300';
+                renderEntries();
             }
         };
 
-        // Form Submit Handler
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const id = idInput.value;
-            const name = nameInput.value.trim();
-            const contact = contactInput.value.trim();
-            const email = emailInput.value.trim();
-            const notes = notesInput.value.trim();
+        // --- MODAL LOGIC ---
+        const overlay = document.getElementById('modal-overlay');
+        const clientModal = document.getElementById('client-modal');
+        const entryModal = document.getElementById('entry-modal');
+        const invoiceSetupModal = document.getElementById('invoice-setup-modal');
 
-            if (!name) return;
+        const closeModals = () => {
+            overlay.classList.remove('opacity-100', 'pointer-events-auto');
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            clientModal.classList.add('hidden');
+            entryModal.classList.add('hidden');
+            invoiceSetupModal.classList.add('hidden');
+            document.body.classList.remove('modal-active');
+        };
+
+        const openModal = (modalElement) => {
+            closeModals();
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+            overlay.classList.add('opacity-100', 'pointer-events-auto');
+            modalElement.classList.remove('hidden');
+            document.body.classList.add('modal-active');
+        };
+
+        // --- CLIENTS LOGIC ---
+        const clientForm = document.getElementById('client-form');
+        const clientSearch = document.getElementById('client-search');
+        
+        window.openClientModal = (id = null) => {
+            clientForm.reset();
+            document.getElementById('client-id').value = '';
+            document.getElementById('client-modal-title').innerText = 'Add Client';
+            
+            if (id) {
+                const client = clients.find(c => c.id === id);
+                if (client) {
+                    document.getElementById('client-id').value = client.id;
+                    document.getElementById('client-name').value = client.name;
+                    document.getElementById('client-contact').value = client.contact || '';
+                    document.getElementById('client-email').value = client.email || '';
+                    document.getElementById('client-modal-title').innerText = 'Edit Client';
+                }
+            }
+            openModal(clientModal);
+        };
+
+        clientForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('client-id').value;
+            const name = document.getElementById('client-name').value.trim();
+            const contact = document.getElementById('client-contact').value.trim();
+            const email = document.getElementById('client-email').value.trim();
 
             if (id) {
-                // Update existing
-                const index = clients.findIndex(c => c.id === id);
-                if (index !== -1) {
-                    clients[index] = { ...clients[index], name, contact, email, notes };
-                }
+                const idx = clients.findIndex(c => c.id === id);
+                if (idx !== -1) clients[idx] = { ...clients[idx], name, contact, email };
             } else {
-                // Add new
-                const newClient = {
-                    id: Date.now().toString(),
-                    name,
-                    contact,
-                    email,
-                    notes,
-                    createdAt: new Date().toISOString()
-                };
-                clients.push(newClient);
+                clients.push({ id: Date.now().toString(), name, contact, email, createdAt: new Date().toISOString() });
             }
-
-            saveToStorage();
-            renderClients(searchInput.value);
-            resetForm();
+            saveData();
+            closeModals();
+            renderClients(clientSearch.value);
         });
 
-        // Edit Client
-        window.editClient = (id) => {
-            const client = clients.find(c => c.id === id);
-            if (!client) return;
-
-            idInput.value = client.id;
-            nameInput.value = client.name;
-            contactInput.value = client.contact || '';
-            emailInput.value = client.email || '';
-            notesInput.value = client.notes || '';
-
-            formTitle.innerText = 'Edit Client';
-            saveBtn.innerText = 'Update Details';
-            cancelBtn.classList.remove('hidden');
-            
-            // Focus name input softly
-            nameInput.focus();
-        };
-
-        // Delete Client
         window.deleteClient = (id) => {
-            if (confirm('Are you sure you want to delete this client?')) {
+            if (confirm('Delete this client? Associated entries will remain but show as Unknown.')) {
                 clients = clients.filter(c => c.id !== id);
-                saveToStorage();
-                renderClients(searchInput.value);
+                saveData();
+                renderClients(clientSearch.value);
             }
         };
 
-        // Reset Form
-        window.resetForm = () => {
-            form.reset();
-            idInput.value = '';
-            formTitle.innerText = 'Add New Client';
-            saveBtn.innerText = 'Save Client';
-            cancelBtn.classList.add('hidden');
+        const renderClients = (filter = '') => {
+            const grid = document.getElementById('clients-grid');
+            grid.innerHTML = '';
+            const filtered = clients.filter(c => c.name.toLowerCase().includes(filter.toLowerCase()));
+            
+            document.getElementById('client-count').innerText = `${filtered.length} clients`;
+            document.getElementById('client-empty-state').classList.toggle('hidden', filtered.length > 0);
+            
+            filtered.forEach(client => {
+                // Count unbilled entries for this client (basic approximation)
+                const clientEntries = entries.filter(e => e.clientId === client.id);
+                
+                grid.innerHTML += `
+                    <div class="glass-card rounded-xl p-5 flex flex-col transition-all hover:shadow-lg relative group border border-slate-200">
+                        <div class="h-1.5 w-full absolute top-0 left-0 bg-indigo-500 opacity-80 rounded-t-xl"></div>
+                        <div class="flex justify-between items-start mb-4 mt-1">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-800">${client.name}</h3>
+                                <p class="text-xs text-slate-500">${client.contact || 'No contact info'}</p>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="openClientModal('${client.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-md"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+                                <button onclick="deleteClient('${client.id}')" class="p-1.5 text-slate-400 hover:text-red-600 rounded-md"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                            </div>
+                        </div>
+                        <div class="text-sm text-slate-600 mb-6 flex-1">
+                            <div class="bg-slate-50 p-2 rounded border border-slate-100 inline-block">
+                                <span class="font-semibold text-indigo-600">${clientEntries.length}</span> Total Entries Logged
+                            </div>
+                        </div>
+                        <button onclick="openInvoiceSetup('${client.id}', '${client.name}')" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-medium py-2 px-4 rounded text-sm transition">
+                            Generate Monthly Invoice
+                        </button>
+                    </div>
+                `;
+            });
         };
 
-        // Search Listener
-        searchInput.addEventListener('input', (e) => {
-            renderClients(e.target.value);
+        clientSearch.addEventListener('input', (e) => renderClients(e.target.value));
+
+        // --- ENTRIES LOGIC ---
+        const entryForm = document.getElementById('entry-form');
+        
+        window.openEntryModal = (id = null) => {
+            if (clients.length === 0) {
+                alert("Please add a client first before logging an entry.");
+                return;
+            }
+            
+            entryForm.reset();
+            document.getElementById('entry-id').value = '';
+            document.getElementById('entry-date').valueAsDate = new Date();
+            document.getElementById('entry-modal-title').innerText = 'Log Service Entry';
+            
+            // Populate client dropdown
+            const clientSelect = document.getElementById('entry-client');
+            clientSelect.innerHTML = clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            
+            if (id) {
+                const entry = entries.find(e => e.id === id);
+                if (entry) {
+                    document.getElementById('entry-id').value = entry.id;
+                    document.getElementById('entry-date').value = entry.date;
+                    clientSelect.value = entry.clientId;
+                    document.querySelector(`input[name="entry-category"][value="${entry.category}"]`).checked = true;
+                    document.getElementById('entry-desc').value = entry.description;
+                    document.getElementById('entry-qty').value = entry.qty;
+                    document.getElementById('entry-rate').value = entry.rate;
+                    document.getElementById('entry-modal-title').innerText = 'Edit Entry';
+                }
+            }
+            openModal(entryModal);
+        };
+
+        entryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('entry-id').value;
+            const data = {
+                date: document.getElementById('entry-date').value,
+                clientId: document.getElementById('entry-client').value,
+                category: document.querySelector('input[name="entry-category"]:checked').value,
+                description: document.getElementById('entry-desc').value.trim(),
+                qty: parseFloat(document.getElementById('entry-qty').value),
+                rate: parseFloat(document.getElementById('entry-rate').value)
+            };
+
+            if (id) {
+                const idx = entries.findIndex(x => x.id === id);
+                if (idx !== -1) entries[idx] = { ...entries[idx], ...data };
+            } else {
+                entries.push({ id: Date.now().toString(), ...data, createdAt: new Date().toISOString() });
+            }
+            
+            // Sort entries descending by date
+            entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            saveData();
+            closeModals();
+            renderEntries();
         });
 
-        // Generate Invoice specific to client
-        window.generateInvoice = (name, contact) => {
-            const params = new URLSearchParams({
-                clientName: name,
-                clientContact: contact
-            });
-            window.location.href = `index.html?${params.toString()}`;
+        window.deleteEntry = (id) => {
+            if (confirm('Delete this entry?')) {
+                entries = entries.filter(e => e.id !== id);
+                saveData();
+                renderEntries();
+            }
         };
 
-        // Initial Render
+        const renderEntries = () => {
+            const tbody = document.getElementById('entries-table-body');
+            tbody.innerHTML = '';
+            document.getElementById('entries-empty-state').classList.toggle('hidden', entries.length > 0);
+            
+            entries.forEach(entry => {
+                const client = clients.find(c => c.id === entry.clientId);
+                const clientName = client ? client.name : '<span class="text-red-500">Unknown Client</span>';
+                const amount = entry.qty * entry.rate;
+                const catColor = entry.category === 'Editing' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800';
+                
+                tbody.innerHTML += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                        <td class="p-4 whitespace-nowrap">${new Date(entry.date).toLocaleDateString()}</td>
+                        <td class="p-4 font-medium">${clientName}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full ${catColor}">${entry.category}</span>
+                        </td>
+                        <td class="p-4 text-slate-600 max-w-xs truncate" title="${entry.description}">${entry.description}</td>
+                        <td class="p-4 text-right font-medium">₹${amount.toFixed(2)}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="openEntryModal('${entry.id}')" class="text-indigo-600 hover:underline mr-2 text-sm">Edit</button>
+                            <button onclick="deleteEntry('${entry.id}')" class="text-red-600 hover:underline text-sm">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        };
+
+        // --- MONTHLY INVOICE GENERATION ---
+        window.openInvoiceSetup = (clientId, clientName) => {
+            document.getElementById('inv-setup-client-id').value = clientId;
+            document.getElementById('inv-setup-client-name').innerText = clientName;
+            
+            // Default to current month
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            document.getElementById('inv-setup-month').value = `${yyyy}-${mm}`;
+            
+            openModal(invoiceSetupModal);
+        };
+
+        window.proceedToInvoice = () => {
+            const clientId = document.getElementById('inv-setup-client-id').value;
+            const monthVal = document.getElementById('inv-setup-month').value; // format: "YYYY-MM"
+            if (!monthVal) return alert('Select a month');
+            
+            const [year, month] = monthVal.split('-');
+            
+            // Filter entries for this client and month
+            const clientEntries = entries.filter(e => {
+                if (e.clientId !== clientId) return false;
+                const eDate = new Date(e.date);
+                return eDate.getFullYear() == year && (eDate.getMonth() + 1) == month;
+            });
+            
+            if (clientEntries.length === 0) {
+                alert('No entries found for this client in the selected month.');
+                return;
+            }
+
+            const client = clients.find(c => c.id === clientId);
+            
+            // Save draft to localStorage for index.html to read
+            const draft = {
+                client: client,
+                entries: clientEntries,
+                monthVal: monthVal
+            };
+            localStorage.setItem('invoice_draft', JSON.stringify(draft));
+            
+            // Redirect
+            window.location.href = 'index.html';
+        };
+
+        // Initialize
         renderClients();
     </script>
 </body>
