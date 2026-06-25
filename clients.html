@@ -320,6 +320,13 @@
             document.body.classList.add('modal-active');
         };
 
+        // Close modals when clicking outside
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                window.closeModals();
+            }
+        });
+
         const clientForm = document.getElementById('client-form');
         const clientSearch = document.getElementById('client-search');
         
@@ -350,19 +357,27 @@
                 email: document.getElementById('client-email').value.trim()
             };
 
-            if (id) {
-                await updateDoc(doc(db, "clients", id), data);
-            } else {
-                data.createdAt = new Date().toISOString();
-                await addDoc(collection(db, "clients"), data);
+            try {
+                if (id) {
+                    await updateDoc(doc(db, "clients", id), data);
+                } else {
+                    data.createdAt = new Date().toISOString();
+                    await addDoc(collection(db, "clients"), data);
+                }
+                window.closeModals();
+            } catch (err) {
+                console.error("Firebase Error: ", err);
+                alert("Failed to save client: " + err.message + "\n\nMake sure your Firestore Database is created and in Test Mode!");
             }
-            
-            window.closeModals();
         });
 
         window.deleteClient = async (id) => {
             if (confirm('Delete this client? Associated entries will remain.')) {
-                await deleteDoc(doc(db, "clients", id));
+                try {
+                    await deleteDoc(doc(db, "clients", id));
+                } catch (err) {
+                    alert("Failed to delete client: " + err.message);
+                }
             }
         };
 
@@ -454,19 +469,27 @@
                 rate: parseFloat(document.getElementById('entry-rate').value)
             };
 
-            if (id) {
-                await updateDoc(doc(db, "entries", id), data);
-            } else {
-                data.createdAt = new Date().toISOString();
-                await addDoc(collection(db, "entries"), data);
+            try {
+                if (id) {
+                    await updateDoc(doc(db, "entries", id), data);
+                } else {
+                    data.createdAt = new Date().toISOString();
+                    await addDoc(collection(db, "entries"), data);
+                }
+                window.closeModals();
+            } catch (err) {
+                console.error("Firebase Error: ", err);
+                alert("Failed to log entry: " + err.message + "\n\nMake sure your Firestore Database is created and in Test Mode!");
             }
-            
-            window.closeModals();
         });
 
         window.deleteEntry = async (id) => {
             if (confirm('Delete this entry?')) {
-                await deleteDoc(doc(db, "entries", id));
+                try {
+                    await deleteDoc(doc(db, "entries", id));
+                } catch (err) {
+                    alert("Failed to delete entry: " + err.message);
+                }
             }
         };
 
